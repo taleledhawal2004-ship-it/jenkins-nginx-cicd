@@ -1,0 +1,44 @@
+version: '3.8'
+
+networks:
+  vpc_network:
+    driver: bridge
+
+services:
+  # Server 1: CI/CD Jenkins Server
+  jenkins-server:
+    image: jenkins/jenkins:lts
+    container_name: cicd-jenkins-server
+    privileged: true
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - vpc_network
+
+  # Server 2: Production Web Application Container
+  web-server:
+    image: nginx:alpine
+    container_name: prod-web-server
+    networks:
+      - vpc_network
+
+  # Reverse Proxy: NGINX Facing the Public Traffic
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: prod-nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web-server
+    networks:
+      - vpc_network
+
+volumes:
+  jenkins_data:
